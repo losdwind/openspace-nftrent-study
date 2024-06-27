@@ -75,6 +75,15 @@ export default function Rentout() {
       // 获取 NFT 基本信息
       const oneday = 24 * 60 * 60;
       const order = {
+        nftCA: selectedNft.ca,
+        tokenId: selectedNft.tokenId,
+        dailyRent: dailyRentRef.current?.value,
+        maxRentalDuration: maxRentalDurationRef.current?.value,
+        minCollateral: collateralRef.current?.value,
+        listEndTime: listLifetimeRef.current?.value,
+      };
+      console.log(order);
+      const response = await fetch("/api/listing", {
         maker: userWallet!,
         nft_ca: selectedNft.ca,
         token_id: BigInt(selectedNft.tokenId),

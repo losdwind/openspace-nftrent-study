@@ -1,5 +1,12 @@
 import useSWR from "swr";
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { RENFT_GRAPHQL_URL, DEFAULT_NFT_IMG_URL } from "@/config";
+import { NFTInfo } from "@/types";
+import {
+  useAccount,
+  useReadContract,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
 import { gql, request } from "graphql-request";
 
 import { RENFT_GRAPHQL_URL, DEFAULT_NFT_IMG_URL, config, PROTOCOL_CONFIG } from "@/config";
