@@ -21,7 +21,7 @@ export default async function handler(
     const result = await sql`CREATE TABLE IF NOT EXISTS rentout_orders (
         id SERIAL PRIMARY KEY,
         chain_id INTEGER NOT NULL,
-        taker TEXT,
+        maker TEXT,
         nft_ca TEXT,
         token_url TEXT,
         token_name TEXT,
@@ -53,6 +53,7 @@ export async function saveOrder(
   } and token_id = ${order.token_id.toString()}`;
 
   // 插入新记录
+
   return sql`insert into rentout_orders (chain_id, maker, nft_ca, token_id, max_rental_duration, daily_rent, min_collateral, list_endtime,token_url,token_name,signature) 
    values (${chainId}, ${order.maker}, ${
     order.nft_ca

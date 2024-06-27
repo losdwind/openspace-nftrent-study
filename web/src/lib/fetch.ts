@@ -9,12 +9,7 @@ import {
 } from "wagmi";
 import { gql, request } from "graphql-request";
 
-import {
-  RENFT_GRAPHQL_URL,
-  DEFAULT_NFT_IMG_URL,
-  config,
-  PROTOCOL_CONFIG,
-} from "@/config";
+import { RENFT_GRAPHQL_URL, DEFAULT_NFT_IMG_URL, config, PROTOCOL_CONFIG } from "@/config";
 import { NFTInfo, RentoutOrderMsg } from "@/types";
 import { sepolia } from "viem/chains";
 import { readContract } from "viem/actions";
@@ -36,10 +31,7 @@ interface NFTBalanceResponse {
   isLoading: boolean;
 }
 
-const fetcher = (
-  input: string | URL | globalThis.Request,
-  init?: RequestInit
-) => fetch(input, init).then((res) => res.json());
+const fetcher = (input: string | URL | globalThis.Request, init?: RequestInit) => fetch(input, init).then((res) => res.json());
 
 /**
  *
@@ -70,8 +62,7 @@ export function useUserNFTs(): NFTBalanceResponse {
           },
         }
       : null,
-    (req: GQL) =>
-      request<queryResponse>(RENFT_GRAPHQL_URL!, req.query, req.variables)
+    (req: GQL) => request<queryResponse>(RENFT_GRAPHQL_URL!, req.query, req.variables)
   );
 
   // 尚未登录时，返回空数据
@@ -84,12 +75,7 @@ export function useUserNFTs(): NFTBalanceResponse {
 
 export function useUserListing() {
   const { address, chainId, isConnected } = useAccount();
-  const { data, error, isLoading } = useSWR(
-    isConnected
-      ? `/api/user/listing?chainId=${chainId!}&wallet=${address!}`
-      : null,
-    fetcher
-  );
+  const { data, error, isLoading } = useSWR(isConnected ? `/api/user/listing?chainId=${chainId!}&wallet=${address!}` : null, fetcher);
   if (error || !data) {
     return {
       data,
@@ -155,6 +141,8 @@ export function useFetchNFTMetadata(nft: NFTInfo) {
 export function reserverURL(url: string) {
   if (url.startsWith("ipfs://")) {
     return url.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+  } else {
+    return "https://cloudflare-ipfs.com/ipfs/" + url;
   }
   return url;
 }
@@ -163,10 +151,7 @@ export function reserverURL(url: string) {
 export function useFethcMarketListing() {
   const { chainId } = useAccount();
 
-  const { data, error, isLoading } = useSWR(
-    `/api/listing?chainId=${chainId || sepolia.id}`,
-    fetcher
-  );
+  const { data, error, isLoading } = useSWR(`/api/listing?chainId=${chainId || sepolia.id}`, fetcher);
   console.log("useFethcMarketListing:", data, error, isLoading);
   return {
     data: data?.data,
@@ -177,16 +162,22 @@ export function useFethcMarketListing() {
 
 export function useWriteApproveTx(nft: NFTInfo | null) {
   const { data: hash, isPending, error, writeContract } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({ hash });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const mkt = useMarketContract();
 
+  // if (nft == null) return {};
   // 读合约：获取是否已经授权
   // https://wagmi.sh/react/api/hooks/useReadContract#type-inference
   // 或者检查是否有整个集合授权给MKT合约
-  var approveTo = undefined;
-
   // TODO 查询NFT是否已经授权给市场合约
+  const result = useReadContract({
+    abi: ERC721ABI,
+    address: nft?.ca as Address,
+    functionName: "getApproved",
+    args: [BigInt(nft?.tokenId ?? -1)],
+  });
+
+  const approveTo = result.data;
 
   return {
     hash,
@@ -198,6 +189,12 @@ export function useWriteApproveTx(nft: NFTInfo | null) {
     sendTx: () => {
       // TODO 写合约：调用NFT合约，将 NFT 授权给市场合约
       // https://wagmi.sh/react/guides/write-to-contract#_4-hook-up-the-usewritecontract-hook
+      writeContract({
+        address: nft?.ca as Address,
+        abi: ERC721ABI,
+        functionName: "approve",
+        args: [mkt?.address as Address, BigInt(nft?.tokenId as string)],
+      });
     },
   };
 }

@@ -9,15 +9,22 @@ import Link from "next/link";
 import SelectNFT from "@/components/nft/SelectNFT";
 import { NFTInfo, RentoutOrderMsg } from "@/types";
 import { useUserNFTs, useWriteApproveTx } from "@/lib/fetch";
-import { useAccount } from "wagmi";
+import { useAccount, useSignTypedData } from "wagmi";
 
-import { signTypedData, getAccount } from "@wagmi/core";
 import { config, eip721Types, PROTOCOL_CONFIG, wagmiConfig } from "@/config";
-import { parseUnits } from "viem";
+import {
+  AccountStateConflictError,
+  createWalletClient,
+  http,
+  parseUnits,
+} from "viem";
+import types from "tailwindcss";
+import { mainnet, sepolia } from "viem/chains";
 
 export default function Rentout() {
   const nftResp = useUserNFTs();
   const { address: userWallet, chainId } = useAccount();
+  const { signTypedDataAsync } = useSignTypedData();
 
   const [selectedNft, setSelectedNft] = useState<NFTInfo | null>(null);
   const [step, setStep] = useState(1);
@@ -50,7 +57,7 @@ export default function Rentout() {
   const approveHelp = useWriteApproveTx(selectedNft);
 
   const handleApprove = async () => {
-    await approveHelp.sendTx();
+    approveHelp.sendTx();
   };
 
   // submit listing order
@@ -89,14 +96,21 @@ export default function Rentout() {
           Math.ceil(Date.now() / 1000) +
             Number(listLifetimeRef.current!.value) * oneday
         ),
-      } as RentoutOrderMsg;
+      };
+      console.log("order", order);
 
       console.log("info:", chainId, PROTOCOL_CONFIG[chainId!].domain);
 
       // TODO 请求钱包签名，获得签名信息
-      const signature = "0x0000...0000";
+      const signature = await signTypedDataAsync({
+        domain: PROTOCOL_CONFIG[chainId!].domain,
+        types: eip721Types,
+        primaryType: "RentoutOrder",
+        message: order,
+      });
 
-      console.log("signature", signature);
+      console.log(signature);
+      // debugger;
 
       const res = await fetch("/api/user/rentout", {
         method: "POST",
@@ -110,8 +124,11 @@ export default function Rentout() {
           nft: selectedNft,
         }),
       });
+
+      console.log("res", res);
       if (res.ok) {
         const data = await res.json();
+        console.log("data", data);
         if (data.error) {
           throw new Error(data.error);
         }

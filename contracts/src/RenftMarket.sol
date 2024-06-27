@@ -31,20 +31,44 @@ contract RenftMarket is EIP712 {
    * @dev 验证签名后，将NFT从出租人转移到租户，并存储订单信息
    */
   function borrow(RentoutOrder calldata order, bytes calldata makerSignature) external payable {
-    revert("TODO");
+    bytes32 hash = _hashTypedDataV4(orderHash(order));
+
+    address signer = ECDSA.recover(hash, makerSignature);
+    IERC721(order.nft_ca).transferFrom(address(this), signer, order.token_id);
   }
 
   /**
    * 1. 取消时一定要将取消的信息在链上标记，防止订单被使用！
    * 2. 防DOS： 取消订单有成本，这样防止随意的挂单，
    */
-  function cancelOrder(RentoutOrder calldata order, bytes calldata makerSignatre) external {
-    revert("TODO");
+  function cancelOrder(RentoutOrder calldata order, bytes calldata makerSignature) external {
+    bytes32 hash = _hashTypedDataV4(orderHash(order));
+
+    address signer = ECDSA.recover(hash, makerSignature);
+    require(signer == order.maker, "signer is not maker");
+
+    canceledOrders[orderHash(order)] = true;
+    emit OrderCanceled(order.maker, hash);
   }
 
   // 计算订单哈希
-  function orderHash(RentoutOrder calldata order) public view returns (bytes32) {
-    revert("TODO");
+  function orderHash(RentoutOrder calldata order) public pure returns (bytes32) {
+    bytes32 ORDERTYPEHASH = keccak256(
+      "RentoutOrder(address maker,address nft_ca,uint256 token_id,uint256 daily_rent,uint256 max_rental_duration,uint256 min_collateral,uint256 list_endtime)"
+    );
+    bytes32 hash = keccak256(
+      abi.encode(
+        ORDERTYPEHASH,
+        order.maker,
+        order.nft_ca,
+        order.token_id,
+        order.daily_rent,
+        order.max_rental_duration,
+        order.min_collateral,
+        order.list_endtime
+      )
+    );
+    return hash;
   }
 
   struct RentoutOrder {
